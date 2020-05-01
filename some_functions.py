@@ -95,9 +95,12 @@ def get_operands(images, avoid_shaky_plus=False):
     
     #extract mini-image of each object, as well as their center
     list_objects = []
+    centers = np.zeros((label.max(),2))
     for i in range(label.max()):
         obj = label==(i+1) #select only object with label i+1
         index = np.nonzero(obj) #find the index of every pixel of the object
+        centers[i, 0] = index[0].mean()
+        centers[i, 1] = index[1].mean()
         left = index[1].min() - 10 #get the bounds of the index
         right = index[1].max() + 10
         top = index[0].min() - 10
@@ -116,7 +119,6 @@ def get_operands(images, avoid_shaky_plus=False):
     for i in range(len(list_objects)):
         vert = height - list_objects[i].shape[0]
         horiz = width - list_objects[i].shape[1]
-        print()
         if vert > 0 and vert%2==0:
             if horiz > 0 and horiz%2==0:
                 all_objects[i,:,:] = np.pad(list_objects[i], ((int(vert/2),int(vert/2)),(int(horiz/2),int(horiz/2))), mode = 'constant')
@@ -138,4 +140,6 @@ def get_operands(images, avoid_shaky_plus=False):
                 all_objects[i,:,:] = np.pad(list_objects[i], ((0,0),(int((horiz-1)/2),int((horiz+1)/2))), mode = 'constant')
             elif horiz == 0:
                 all_objects[i,:,:] = np.pad(list_objects[i], ((0,0),(0,0)), mode = 'constant')
-    return all_objects
+    return all_objects, centers
+
+    
