@@ -18,8 +18,8 @@ test=cv2.adaptiveThreshold(test,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
 #morphology: remove small holes
 kernel = np.ones((3,3),np.uint8)
 test = morphology.remove_small_holes(test, 20)
-f2=plt.figure(4)
-plt.imshow(test, cmap='gray')
+# f2=plt.figure(4)
+# plt.imshow(test, cmap='gray')
 
 
 # #do the same without averaging over all the frames
@@ -63,4 +63,18 @@ for i in range(label.max()):
         size = (label==(i+1)).sum()
 
 
+#extract mini-image of each object, as well as their center
+obj1 = label==1
+index = np.nonzero(obj1)
+left = index[1].min() - 10
+right = index[1].max() + 10
+top = index[0].min() - 10
+bottom = index[0].max() + 10
+print(top, bottom, left, right)
 
+f=plt.figure(1)
+plt.imshow(label==1)
+
+f=plt.figure(2)
+plt.imshow(label[top:bottom, left:right])
+plt.show()
