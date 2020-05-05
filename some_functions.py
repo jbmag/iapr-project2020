@@ -2,6 +2,9 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage import morphology
+import torch
+from torch import nn
+from torch.nn import functional as F
 
 #extract every frame from a video
 def extract_frames(video_file_name):
@@ -30,7 +33,8 @@ def get_neighbours_coord(line, col, size, shape):
     neighb = np.zeros(shape, dtype=bool)
     neighb[(line-size):(line+size+1), (col-size):(col+size+1)] = True
     return neighb
-      
+
+#from Lab1:  
 #function to count object in a grey_scale image, with removed background
 def count_objects(image):
     shape_num = 1
@@ -49,7 +53,7 @@ def count_objects(image):
     return label
                     
 
-
+#extract all objects and there center from the frames of the video (uses al the frames)
 def get_operands(images, avoid_shaky_plus=False):
     #average over every frame and over the 3 channels to remove robot
     m_im = images.astype('long').mean(axis=0)
@@ -101,20 +105,21 @@ def get_operands(images, avoid_shaky_plus=False):
         index = np.nonzero(obj) #find the index of every pixel of the object
         centers[i, 0] = index[0].mean()
         centers[i, 1] = index[1].mean()
-        left = index[1].min() - 10 #get the bounds of the index
-        right = index[1].max() + 10
-        top = index[0].min() - 10
-        bottom = index[0].max() + 10
-        list_objects.append(label[top:bottom, left:right])
+        left = index[1].min() #- 10 #get the bounds of the index
+        right = index[1].max() #+ 10
+        top = index[0].min() #- 10
+        bottom = index[0].max() #+ 10
+        list_objects.append(label[top:bottom+1, left:right+1])
     
-    #padd the mini-image so that they have the same shape
-    heights = np.zeros(len(list_objects), dtype='int')
-    widths = np.zeros(len(list_objects), dtype='int')
-    for i in range(len(list_objects)):
-        heights[i] = list_objects[i].shape[0]
-        widths[i] = list_objects[i].shape[1]
-    height = heights.max()
-    width = widths.max()
+    #padd the mini-image so that they have the same shape, use 28x28, shape of mnist
+
+    # heights = np.zeros(len(list_objects), dtype='int')
+    # widths = np.zeros(len(list_objects), dtype='int')
+    # for i in range(len(list_objects)):
+    #     heights[i] = list_objects[i].shape[0]
+    #     widths[i] = list_objects[i].shape[1]
+    height = 28#heights.max()
+    width = 28#widths.max()
     all_objects = np.zeros((len(list_objects), height, width))
     for i in range(len(list_objects)):
         vert = height - list_objects[i].shape[0]
@@ -142,4 +147,19 @@ def get_operands(images, avoid_shaky_plus=False):
                 all_objects[i,:,:] = np.pad(list_objects[i], ((0,0),(0,0)), mode = 'constant')
     return all_objects, centers
 
+#standard convnet
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=5) 
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=5)
+        self.fc1 = nn.Linear(256, 200)
+        self.fc2 = nn.Linear(200, 10)
     
+    def forward(self, x):
+        x = F.relu(F.max_pool2d(self.conv1(x), kernel_size=3, stride=3))
+        x = F.relu(F.max_pool2d(self.conv2(x), kernel_size=2, stride=2))
+        x = F.relu(self.fc1(x.view(-1, 256)))
+        x = self.fc2(x)
+        return x
+ 
